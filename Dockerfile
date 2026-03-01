@@ -8,13 +8,13 @@
 #   - NVFP4 quantization for nvidia/NVIDIA-Nemotron-Nano-9B-v2-NVFP4
 #
 # Build (fast — downloads pre-compiled .so from GitHub Release):
-#   docker build -t vllm-nvfp4 .
+#   docker build -t nemo-vllm-blackwell:v0.16.0-nemo26.02-sm120 .
 #
 # Build (from source — recompiles CUDA kernels ~17 min):
-#   docker build --build-arg USE_PREBUILT=0 -t vllm-nvfp4 .
+#   docker build --build-arg USE_PREBUILT=0 -t nemo-vllm-blackwell:v0.16.0-nemo26.02-sm120 .
 #
 # Run (vLLM server):
-#   docker run --rm --gpus all -p 8000:8000 vllm-nvfp4 \
+#   docker run --rm --gpus all -p 8000:8000 nemo-vllm-blackwell:v0.16.0-nemo26.02-sm120 \
 #     --model nvidia/NVIDIA-Nemotron-Nano-9B-v2-NVFP4 --quantization nvfp4
 
 FROM nvcr.io/nvidia/nemo:26.02.00

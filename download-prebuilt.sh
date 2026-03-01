@@ -58,4 +58,4 @@ echo
 echo "Done. Total size:"
 du -sh "${VLLM_DIR}"/vllm/*.so "${VLLM_DIR}"/vllm/vllm_flash_attn/*.so 2>/dev/null
 echo
-echo "Ready to build: docker build -t vllm-nvfp4 ."
+echo "Ready to build: docker build -t nemo-vllm-blackwell:${TAG} ."

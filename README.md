@@ -24,7 +24,7 @@ Combines three model stacks in a single image:
 ```bash
 git clone --recursive https://github.com/XTheocharis/nemo-vllm-blackwell.git
 cd nemo-vllm-blackwell
-docker build -t vllm-nvfp4 .
+docker build -t nemo-vllm-blackwell:v0.16.0-nemo26.02-sm120 .
 ```
 
 By default, the build downloads pre-compiled CUDA kernels from [GitHub Releases](https://github.com/XTheocharis/nemo-vllm-blackwell/releases) and skips compilation. Total build time is ~2 minutes (mostly pip installs).
@@ -32,7 +32,7 @@ By default, the build downloads pre-compiled CUDA kernels from [GitHub Releases]
 ### Run the vLLM server
 
 ```bash
-docker run --rm --gpus all -p 8000:8000 vllm-nvfp4 \
+docker run --rm --gpus all -p 8000:8000 nemo-vllm-blackwell:v0.16.0-nemo26.02-sm120 \
     --model nvidia/NVIDIA-Nemotron-Nano-9B-v2-NVFP4 \
     --quantization nvfp4
 ```
@@ -51,7 +51,7 @@ docker run --rm --gpus all -p 8000:8000 vllm-nvfp4 \
 To recompile all CUDA kernels from source (~17 minutes on 16 cores):
 
 ```bash
-docker build --build-arg USE_PREBUILT=0 -t vllm-nvfp4 .
+docker build --build-arg USE_PREBUILT=0 -t nemo-vllm-blackwell:v0.16.0-nemo26.02-sm120 .
 ```
 
 ### Extract new pre-compiled artifacts
@@ -59,7 +59,7 @@ docker build --build-arg USE_PREBUILT=0 -t vllm-nvfp4 .
 After a from-source build, extract the `.so` files to avoid recompiling next time:
 
 ```bash
-docker create --name vllm-extract vllm-nvfp4
+docker create --name vllm-extract nemo-vllm-blackwell:v0.16.0-nemo26.02-sm120
 for f in vllm/_C.abi3.so vllm/_moe_C.abi3.so vllm/cumem_allocator.abi3.so \
          vllm/vllm_flash_attn/_vllm_fa2_C.abi3.so vllm/vllm_flash_attn/_vllm_fa3_C.abi3.so; do
     docker cp "vllm-extract:/workspace/vllm/$f" "vllm/$f"
