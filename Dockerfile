@@ -7,8 +7,7 @@
 #   - NeMo ASR: Canary-Qwen-2.5B (SALM), Sortformer 4-speaker diarization
 #   - NVFP4 quantization for nvidia/NVIDIA-Nemotron-Nano-9B-v2-NVFP4
 #
-# Build (fast — uses pre-compiled .so from download-prebuilt.sh):
-#   ./download-prebuilt.sh
+# Build (fast — downloads pre-compiled .so from GitHub Release):
 #   docker build -t vllm-nvfp4 .
 #
 # Build (from source — recompiles CUDA kernels ~17 min):
@@ -23,6 +22,7 @@ FROM nvcr.io/nvidia/nemo:26.02.00
 ARG MAX_JOBS=16
 ARG TORCH_CUDA_ARCH_LIST="12.0"
 ARG USE_PREBUILT=1
+ARG PREBUILT_TAG=v0.16.0-nemo26.02-sm120
 
 ENV TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST}
 ENV MAX_JOBS=${MAX_JOBS}
@@ -44,13 +44,27 @@ RUN apt-get update -y && \
 
 # ---------------------------------------------------------------------------
 # 3. Copy patched vLLM v0.16.0 source (with PR #31543 cherry-picked)
-#    Pre-compiled .so files in vllm/ are included when present.
 # ---------------------------------------------------------------------------
 WORKDIR /workspace/vllm
 COPY vllm/ .
 
 # ---------------------------------------------------------------------------
-# 4. Strip torch pins and flashinfer (container provides PyTorch; no
+# 4. Download pre-compiled .so from GitHub Release (when USE_PREBUILT=1)
+# ---------------------------------------------------------------------------
+RUN if [ "${USE_PREBUILT}" = "1" ]; then \
+        BASE_URL="https://github.com/XTheocharis/nemo-vllm-blackwell/releases/download/${PREBUILT_TAG}" && \
+        mkdir -p vllm/vllm_flash_attn && \
+        echo "==> Downloading pre-compiled .so from ${BASE_URL}" && \
+        curl -fSL -o vllm/_C.abi3.so           "${BASE_URL}/_C.abi3.so" && \
+        curl -fSL -o vllm/_moe_C.abi3.so       "${BASE_URL}/_moe_C.abi3.so" && \
+        curl -fSL -o vllm/cumem_allocator.abi3.so "${BASE_URL}/cumem_allocator.abi3.so" && \
+        curl -fSL -o vllm/vllm_flash_attn/_vllm_fa2_C.abi3.so "${BASE_URL}/_vllm_fa2_C.abi3.so" && \
+        curl -fSL -o vllm/vllm_flash_attn/_vllm_fa3_C.abi3.so "${BASE_URL}/_vllm_fa3_C.abi3.so" && \
+        echo "==> Downloaded 5 .so files" ; \
+    fi
+
+# ---------------------------------------------------------------------------
+# 5. Strip torch pins and flashinfer (container provides PyTorch; no
 #    flashinfer wheel for CUDA 13.0)
 # ---------------------------------------------------------------------------
 RUN sed -i '/^torch==/d; /^torchaudio==/d; /^torchvision==/d' \
@@ -59,7 +73,7 @@ RUN sed -i '/^torch==/d; /^torchaudio==/d; /^torchvision==/d' \
     sed -i '/^flashinfer-python/d' requirements/cuda.txt
 
 # ---------------------------------------------------------------------------
-# 5. Install vLLM build + runtime dependencies not already in NeMo image
+# 6. Install vLLM build + runtime dependencies not already in NeMo image
 # ---------------------------------------------------------------------------
 RUN pip install --no-cache-dir --no-build-isolation \
         "setuptools-scm>=8" \
@@ -68,18 +82,17 @@ RUN pip install --no-cache-dir --no-build-isolation \
         -r requirements/cuda.txt
 
 # ---------------------------------------------------------------------------
-# 6. Install fla (Flash Linear Attention — DeltaNet kernels for
+# 7. Install fla (Flash Linear Attention — DeltaNet kernels for
 #    Nemotron-Flash-3B's gated linear attention layers)
 # ---------------------------------------------------------------------------
 RUN pip install --no-cache-dir fla-core
 
 # ---------------------------------------------------------------------------
-# 7. Install vLLM v0.16.0
-#    USE_PREBUILT=1 (default): .so files already in vllm/ from COPY step,
-#      uses VLLM_TARGET_DEVICE=empty to skip compilation.
-#    USE_PREBUILT=0: full from-source build with CUDA kernel compilation.
+# 8. Install vLLM v0.16.0
+#    If .so files are present (prebuilt or local), skip CUDA compilation.
+#    Otherwise, build from source.
 # ---------------------------------------------------------------------------
-RUN if [ "${USE_PREBUILT}" = "1" ] && [ -f vllm/_C.abi3.so ]; then \
+RUN if [ -f vllm/_C.abi3.so ]; then \
         echo "==> Pre-compiled .so detected, skipping CUDA build" && \
         VLLM_TARGET_DEVICE=empty pip install --no-build-isolation --no-cache-dir -e . ; \
     else \
@@ -88,7 +101,7 @@ RUN if [ "${USE_PREBUILT}" = "1" ] && [ -f vllm/_C.abi3.so ]; then \
     fi
 
 # ---------------------------------------------------------------------------
-# 8. Verify all three model stacks import cleanly
+# 9. Verify all three model stacks import cleanly
 # ---------------------------------------------------------------------------
 RUN python -c "import vllm; print(f'vLLM {vllm.__version__}')" && \
     python -c "import nemo; print(f'NeMo {nemo.__version__}')"
