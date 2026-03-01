@@ -1,0 +1,3 @@
+# Pre-compiled CUDA kernels (downloaded via download-prebuilt.sh)
+vllm/vllm/*.so
+vllm/vllm/vllm_flash_attn/*.so

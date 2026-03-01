@@ -1,0 +1,18 @@
+.git
+vllm/.git
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+vllm/build/
+vllm/cmake-build-*/
+vllm/dist/
+vllm/*.egg-info/
+
+# IDE / editor
+.mypy_cache
+.vscode
+.idea

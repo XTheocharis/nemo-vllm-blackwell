@@ -1,0 +1,4 @@
+[submodule "vllm"]
+	path = vllm
+	url = https://github.com/XTheocharis/vllm.git
+	branch = v0.16.0-nemotron-flash
