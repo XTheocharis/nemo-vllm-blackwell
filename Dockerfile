@@ -51,6 +51,7 @@ COPY vllm/ .
 # ---------------------------------------------------------------------------
 # 4. Download pre-compiled .so from GitHub Release (when USE_PREBUILT=1)
 # ---------------------------------------------------------------------------
+ARG VLLM_FLASH_ATTN_COMMIT=188be16520ceefdc625fdf71365585d2ee348fe2
 RUN if [ "${USE_PREBUILT}" = "1" ]; then \
         BASE_URL="https://github.com/XTheocharis/nemo-vllm-blackwell/releases/download/${PREBUILT_TAG}" && \
         mkdir -p vllm/vllm_flash_attn && \
@@ -60,7 +61,16 @@ RUN if [ "${USE_PREBUILT}" = "1" ]; then \
         curl -fSL -o vllm/cumem_allocator.abi3.so "${BASE_URL}/cumem_allocator.abi3.so" && \
         curl -fSL -o vllm/vllm_flash_attn/_vllm_fa2_C.abi3.so "${BASE_URL}/_vllm_fa2_C.abi3.so" && \
         curl -fSL -o vllm/vllm_flash_attn/_vllm_fa3_C.abi3.so "${BASE_URL}/_vllm_fa3_C.abi3.so" && \
-        echo "==> Downloaded 5 .so files" ; \
+        echo "==> Downloaded 5 .so files" && \
+        echo "==> Fetching vllm-flash-attn Python wrappers" && \
+        git clone --depth 1 https://github.com/vllm-project/flash-attention.git /tmp/flash-attn && \
+        cd /tmp/flash-attn && git fetch --depth 1 origin ${VLLM_FLASH_ATTN_COMMIT} && \
+        git checkout ${VLLM_FLASH_ATTN_COMMIT} && cd /workspace/vllm && \
+        cp -r /tmp/flash-attn/vllm_flash_attn/*.py vllm/vllm_flash_attn/ && \
+        cp -r /tmp/flash-attn/vllm_flash_attn/layers vllm/vllm_flash_attn/ && \
+        cp -r /tmp/flash-attn/vllm_flash_attn/ops vllm/vllm_flash_attn/ && \
+        rm -rf /tmp/flash-attn && \
+        echo "==> Installed flash-attn Python wrappers" ; \
     fi
 
 # ---------------------------------------------------------------------------
